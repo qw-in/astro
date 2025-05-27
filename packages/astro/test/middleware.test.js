@@ -14,6 +14,10 @@ describe('Middleware in DEV mode', () => {
 	before(async () => {
 		fixture = await loadFixture({
 			root: './fixtures/middleware space/',
+			redirects: {
+				'/to-dynamic': '/',
+				'/to-prerendered': '/prerendered'
+			}
 		});
 		devServer = await fixture.startDevServer();
 	});
@@ -94,6 +98,17 @@ describe('Middleware in DEV mode', () => {
 		assert.notEqual(headers.get('set-cookie'), null);
 	});
 
+
+	it('should provide a valid clientAddress when redirecting to a dynamic route', async () => {
+		const response = await fixture.fetch('/to-dynamic', { redirect: "manual" });
+		assert.equal(await response.text(), "::1");
+	});
+
+	it('should provide a valid clientAddress when redirecting to a prerendered route', async () => {
+		const response = await fixture.fetch('/to-prerendered', { redirect: "manual" });
+		assert.equal(await response.text(), "::1");
+	});
+
 	describe('Integration hooks', () => {
 		it('Integration middleware marked as "pre" runs', async () => {
 			const res = await fixture.fetch('/integration-pre');
@@ -150,6 +165,9 @@ describe('Middleware in PROD mode, SSG', () => {
 	before(async () => {
 		fixture = await loadFixture({
 			root: './fixtures/middleware-ssg/',
+			redirects: {
+				'/to-prerendered': '/index.html'
+			}
 		});
 		await fixture.build();
 	});
@@ -168,6 +186,10 @@ describe('Middleware in PROD mode, SSG', () => {
 		html = await fixture.readFile('/second/index.html');
 		$ = cheerio.load(html);
 		assert.equal($('p').html(), 'second');
+	});
+
+	it('should set isPrerendered to true for configured redirects', async () => {
+		assert.equal(await fixture.pathExists('/to-prerendered/index.html'), true);
 	});
 });
 
@@ -198,6 +220,10 @@ describe('Middleware API in PROD mode, SSR', () => {
 			root: './fixtures/middleware space/',
 			output: 'server',
 			adapter: testAdapter({}),
+			redirects: {
+				'/to-dynamic': '/',
+				'/to-prerendered': '/prerendered',
+			}
 		});
 		await fixture.build();
 		app = await fixture.loadTestAdapterApp();
@@ -227,6 +253,16 @@ describe('Middleware API in PROD mode, SSR', () => {
 		const request = new Request('http://example.com/redirect');
 		const response = await app.render(request);
 		assert.equal(response.status, 302);
+	});
+
+	it('should provide a valid clientAddress when redirecting to a dynamic route', async () => {
+		const response = await app.render(new Request('http://example.com/to-dynamic'));
+		assert.equal(await response.text(), "0.0.0.0");
+	});
+
+	it('should provide a valid clientAddress when redirecting to prerendered', async () => {
+		const response = await app.render(new Request('http://example.com/to-prerendered'));
+		assert.equal(await response.text(), "0.0.0.0");
 	});
 
 	it('should call a second middleware', async () => {

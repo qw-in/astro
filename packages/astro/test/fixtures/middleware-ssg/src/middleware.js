@@ -6,6 +6,11 @@ const first = defineMiddleware(async (context, next) => {
 	} else {
 		context.locals.name = 'bar';
 	}
+
+	if (context.url.pathname === '/to-prerendered' && !context.isPrerendered) {
+		throw new Error();
+	}
+
 	return await next();
 });
 

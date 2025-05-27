@@ -42,6 +42,8 @@ const first = defineMiddleware(async (context, next) => {
 		});
 	} else if (context.url.pathname === '/prerendered/') {
 		context.locals.canBeReadDuringPrerendering = "yes they can!";
+	} else if ((context.url.pathname === '/to-prerendered' || context.url.pathname === '/to-dynamic') && !context.isPrerendered) {
+		return new Response(context.clientAddress);
 	} else {
 		if (context.url.pathname === '/') {
 			context.cookies.set('foo', 'bar');
